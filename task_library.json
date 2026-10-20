@@ -1,0 +1,32 @@
+{
+    "$schema": "../task_library.schema.json",
+    "name": "force_control_task_lib",
+    "description": "Library with eTaSL task specifications for force control tasks for Crospi",
+    "license": "GNU GPLv3",
+    "version": "0.1.0",
+    "authors": [
+        {
+            "name": "Santiago Iregui",
+            "affiliation": "KU Leuven",
+            "email": "santiago.iregui@kuleuven.be"
+        },
+        {
+            "name": "Erwin Aertbeliën",
+            "affiliation": "KU Leuven",
+            "email": "erwin.aertbelien@kuleuven.be"
+        },
+        {
+            "name": "Federico Ulloa",
+            "affiliation": "KU Leuven",
+            "email": "federico.ulloarios@kuleuven.be"
+        }
+    ],
+    "maintainers": [
+        {
+            "name": "Santiago Iregui",
+            "affiliation": "KU Leuven",
+            "email": "santiago.iregui@kuleuven.be"
+        }
+    ],
+    "acknowledgements": "The authors acknowledge the financial support of Flanders Make Au2wire_IRVA."
+}
