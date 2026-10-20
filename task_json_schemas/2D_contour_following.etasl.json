@@ -37,6 +37,22 @@
               "examples":["$blackboard/output_param/my_task/FT_sensor_frame","$application_defined_parameter"],
               "description":"Name of frame where the forces and torques are measured. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
             },
+            "filter_cutoff_frequency":{
+              "oneOf":[{
+                  "minimum":0,
+                  "type":"number",
+                  "maximum":10
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":5,
+              "examples":["$blackboard/output_param/my_task/filter_cutoff_frequency","$application_defined_parameter"],
+              "description":"Cut-off frequency [Hz] of the Butterworth low-pass filter applied to the measured wrench. Set to 0 to disable the filter. Keep it well below the Nyquist frequency of the controller (e.g. <= 10 Hz at 100 Hz). \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+            },
             "K_tracking":{
               "oneOf":[{
                   "minimum":0,
@@ -81,6 +97,22 @@
               "default":0.02,
               "examples":["$blackboard/output_param/my_task/tangential_velocity","$application_defined_parameter"],
               "description":"Desired velocity [m/s] along the tangent of the contour. The sign selects the direction of motion along the contour. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+            },
+            "filter_order":{
+              "oneOf":[{
+                  "minimum":2,
+                  "type":"integer",
+                  "maximum":4
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":2,
+              "examples":["$blackboard/output_param/my_task/filter_order","$application_defined_parameter"],
+              "description":"Order of the Butterworth low-pass filter (2, 3 or 4). \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
             },
             "tool_weight":{
               "oneOf":[{
@@ -161,7 +193,7 @@
                   "const":"$application_defined_parameter",
                   "type":"string"
                 }],
-              "default":1,
+              "default":3,
               "examples":["$blackboard/output_param/my_task/ramp_up_time","$application_defined_parameter"],
               "description":"Time [s] to linearly increase the tangential velocity from zero to tangential_velocity, while the task frame aligns with the contour. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
             },
@@ -191,7 +223,7 @@
                   "const":"$application_defined_parameter",
                   "type":"string"
                 }],
-              "default":4,
+              "default":8,
               "examples":["$blackboard/output_param/my_task/K_force","$application_defined_parameter"],
               "description":"Feedback gain [1/s] of the normal force control. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
             },
@@ -241,7 +273,7 @@
             }
           },
           "additionalProperties":false,
-          "required":["task_frame","FT_sensor_frame","tf_2_contact_frame","wrench_convention","normal_force","tangential_velocity","ramp_up_time","path_length","contact_stiffness","K_force","K_tracking","K_hold","tool_COG","tool_weight"]
+          "required":["task_frame","FT_sensor_frame","tf_2_contact_frame","wrench_convention","normal_force","tangential_velocity","ramp_up_time","path_length","contact_stiffness","K_force","K_tracking","K_hold","tool_COG","tool_weight","filter_cutoff_frequency","filter_order"]
         }
       }
     },

@@ -63,15 +63,17 @@ param = reqs.parameters(task_description,{
                             description="Sign convention of the measured wrench: wrench that the robot exerts on the environment (e.g. MuJoCo simulator) or wrench that the environment exerts on the robot", required=true, accepted_vals = {"exerted_on_environment","exerted_on_robot"}}),
     reqs.params.scalar({name="normal_force", description="Desired contact force [N] normal to the contour (pushing against the contour)", default = 10.0, required=true, minimum = 0.0}),
     reqs.params.scalar({name="tangential_velocity", description="Desired velocity [m/s] along the tangent of the contour. The sign selects the direction of motion along the contour", default = 0.02, required=true, minimum = -0.2, maximum = 0.2}),
-    reqs.params.scalar({name="ramp_up_time", description="Time [s] to linearly increase the tangential velocity from zero to tangential_velocity, while the task frame aligns with the contour", default = 1.0, required=true, minimum = 0.0}),
+    reqs.params.scalar({name="ramp_up_time", description="Time [s] to linearly increase the tangential velocity from zero to tangential_velocity, while the task frame aligns with the contour", default = 3.0, required=true, minimum = 0.0}),
     reqs.params.scalar({name="path_length", description="Distance [m] travelled along the contour after which the task finishes", default = 0.5, required=true, minimum = 0.0}),
     reqs.params.scalar({name="contact_stiffness", description="Estimated stiffness [N/m] of the contact (environment + robot) in the normal direction", default = 5000.0, required=true, minimum = 0.0}),
-    reqs.params.scalar({name="K_force", description="Feedback gain [1/s] of the normal force control", default = 4.0, required=true, minimum = 0.0}),
+    reqs.params.scalar({name="K_force", description="Feedback gain [1/s] of the normal force control", default = 8.0, required=true, minimum = 0.0}),
     reqs.params.scalar({name="K_tracking", description="Feedback gain [1/s] of the rotation of the task frame that tracks the normal of the contour", default = 1.0, required=true, minimum = 0.0}),
     reqs.params.scalar({name="K_hold", description="Feedback gain [1/s] to keep the initial position along the tool axis and the initial orientation of the tool", default = 4.0, required=true, minimum = 0.0}),
     reqs.params.array({name="tool_COG", type=reqs.array_types.number, default={0.0, 0.0, 0.0},
                             description="Array with the center of gravity of the tool w.r.t FT_sensor_frame [m]", required=true, minItems = 3, maxItems = 3}),
     reqs.params.scalar({name="tool_weight", description="Weight of the tool attached to the force/torque sensor [N]", default = 0.0, required=true, minimum = 0.0}),
+    reqs.params.scalar({name="filter_cutoff_frequency", description="Cut-off frequency [Hz] of the Butterworth low-pass filter applied to the measured wrench. Set to 0 to disable the filter. Keep it well below the Nyquist frequency of the controller (e.g. <= 10 Hz at 100 Hz)", default = 5.0, required=true, minimum = 0.0, maximum = 10.0}),
+    reqs.params.int({name="filter_order", description="Order of the Butterworth low-pass filter (2, 3 or 4)", default = 2, required=true, minimum = 2, maximum = 4}),
 })
 
 
@@ -97,6 +99,8 @@ K_hold              = constant(param.get("K_hold"))
 tool_weight         = constant(param.get("tool_weight"))
 tool_COG            = param.get("tool_COG")
 tf_2_contact_frame  = param.get("tf_2_contact_frame")
+filter_cutoff_frequency = param.get("filter_cutoff_frequency")
+filter_order            = param.get("filter_order")
 
 tool_COG = vector(constant(tool_COG[1]), constant(tool_COG[2]), constant(tool_COG[3]))
 
@@ -112,7 +116,33 @@ contact_frame = task_frame*tf_2_contact_frame
 
 -- ========================================= FORCE MEASUREMENTS ===================================
 -- Wrench measured by the F/T sensor, expressed in FT_sensor_frame with its origin as reference point
-sensed_wrench = ctx:createInputChannelWrench("wrench_input")
+raw_wrench = ctx:createInputChannelWrench("wrench_input")
+
+-- 0) Low-pass filter each component of the raw measurement (Butterworth filter, see utilities/filters_etasl.lua).
+--    The filter is added to the eTaSL controller: its states are feature variables that start at zero.
+--    To avoid that the filtered signal starts at zero, the filter is applied to the change of the signal
+--    w.r.t. its initial value, and the initial value is added again (the filter has a static gain of one).
+--    filters_etasl is a file of this library (and not of the application ROS2 package), so its directory is added to package.path:
+local script_dir = debug.getinfo(1, "S").source:match("@(.*)/")
+package.path = script_dir .. "/utilities/?.lua;" .. package.path
+require("filters_etasl")
+
+function low_pass(name, signal)
+    if filter_cutoff_frequency <= 0 then
+        return signal
+    end
+    local signal_0 = initial_value(time, signal)
+    local omega    = 2*math.pi*filter_cutoff_frequency -- cut-off frequency [rad/s]
+    return signal_0 + generate_butter_low_pass(ctx, name, omega, signal - signal_0, filter_order)
+end
+
+sensed_wrench = wrench(
+    vector(low_pass("filter_Fx", coord_x(force(raw_wrench))),
+           low_pass("filter_Fy", coord_y(force(raw_wrench))),
+           low_pass("filter_Fz", coord_z(force(raw_wrench)))),
+    vector(low_pass("filter_Tx", coord_x(torque(raw_wrench))),
+           low_pass("filter_Ty", coord_y(torque(raw_wrench))),
+           low_pass("filter_Tz", coord_z(torque(raw_wrench)))))
 
 -- 1) Wrench acting ON the robot through the sensor:
 if param.get("wrench_convention") == "exerted_on_environment" then
