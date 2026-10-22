@@ -233,56 +233,56 @@ Constraint{
 time_start = conditional(time-time_delay, 1, 0)
 
 if axis=="x" then
-    -- Constraint{
-    --     context = ctx,
-    --     name    = "x_max_velocity",
-    --     expr    = coord_x(origin(task_frame_inst)),
-    --     target_upper = maxvel*time,
-    --     target_lower = -maxvel*time,
-    --     K       = 0,
-    --     weight  = 10,
-    --     priority= 1
-    -- };
+    Constraint{
+        context = ctx,
+        name    = "x_max_velocity",
+        expr    = coord_x(origin(task_frame_inst)),
+        target_upper = maxvel*time,
+        target_lower = -maxvel*time,
+        K       = 0,
+        weight  = 10,
+        priority= 1
+    };
 
     Monitor{context=ctx,
         name='finish_force_x',
-        upper=0.7,
+        upper=1.0,
         actionname='exit',
         expr=time_start*abs(Fx)/abs(force_monitor)
     };
 elseif axis=="y" then
-    -- Constraint{
-    --     context = ctx,
-    --     name    = "y_max_velocity",
-    --     expr    = coord_y(origin(task_frame_inst)),
-    --     target_upper = maxvel*time,
-    --     target_lower = -maxvel*time,
-    --     K       = 0,
-    --     weight  = 10,
-    --     priority= 1
-    -- };
+    Constraint{
+        context = ctx,
+        name    = "y_max_velocity",
+        expr    = coord_y(origin(task_frame_inst)),
+        target_upper = maxvel*time,
+        target_lower = -maxvel*time,
+        K       = 0,
+        weight  = 10,
+        priority= 1
+    };
 
     Monitor{context=ctx,
         name='finish_force_y',
-        upper=0.7,
+        upper=1.0,
         actionname='exit',
         expr=time_start*abs(Fy)/abs(force_monitor)
     };
 elseif axis=="z" then
-    -- Constraint{
-    --     context = ctx,
-    --     name    = "z_max_velocity",
-    --     expr    = coord_z(origin(task_frame_inst)),
-    --     target_upper = maxvel*time,
-    --     target_lower = -maxvel*time,
-    --     K       = 0,
-    --     weight  = 10,
-    --     priority= 1
-    -- };
+    Constraint{
+        context = ctx,
+        name    = "z_max_velocity",
+        expr    = coord_z(origin(task_frame_inst)),
+        target_upper = maxvel*time,
+        target_lower = -maxvel*time,
+        K       = 0,
+        weight  = 10,
+        priority= 1
+    };
 
     Monitor{context=ctx,
             name='finish_force_z',
-            upper=0.7,
+            upper=1.0,
             actionname='exit',
             expr=time_start*abs(Fz)/abs(force_monitor)
         };
