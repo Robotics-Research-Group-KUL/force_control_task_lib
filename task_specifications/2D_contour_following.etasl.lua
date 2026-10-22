@@ -284,9 +284,9 @@ ctx:setOutputExpression("pitch_tf"  ,pitch_tf)
 ctx:setOutputExpression("yaw_tf"    ,yaw_tf)
 
 -- external wrench acting on the robot, expressed in the contact frame
-ctx:setOutputExpression("x_force"   ,coord_x(force(wrench_contact_frame)))
-ctx:setOutputExpression("y_force"   ,coord_y(force(wrench_contact_frame)))
-ctx:setOutputExpression("z_force"   ,coord_z(force(wrench_contact_frame)))
+ctx:setOutputExpression("x_force"   ,coord_x(force_tf))
+ctx:setOutputExpression("y_force"   ,coord_y(force_tf))
+ctx:setOutputExpression("z_force"   ,coord_z(force_tf))
 ctx:setOutputExpression("x_torque"  ,coord_x(torque(wrench_contact_frame)))
 ctx:setOutputExpression("y_torque"  ,coord_y(torque(wrench_contact_frame)))
 ctx:setOutputExpression("z_torque"  ,coord_z(torque(wrench_contact_frame)))
