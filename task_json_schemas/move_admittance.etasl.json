@@ -1,0 +1,205 @@
+{
+  "type":"object",
+  "description":"Parameters needed to the corresponding task specification in eTaSL",
+  "properties":{
+    "from-force_control_task_lib-version-0.1.0":{
+      "const":true,
+      "type":"boolean",
+      "description":"Library force_control_task_lib version 0.1.0.\n Set to true to indicate that task specification comes from the library above. \n Library description: Library with eTaSL task specifications for force control tasks for Crospi\nAuthors: Santiago Iregui (KU Leuven), Erwin Aertbeliën (KU Leuven), Federico Ulloa (KU Leuven)"
+    }
+  },
+  "$schema":"http://json-schema.org/draft-06/schema#",
+  "additionalProperties":true,
+  "dependencies":{
+    "is-move_admittance":{
+      "required":["file_path","parameters"],
+      "properties":{
+        "file_path":{
+          "const":"$[crospi_application_template]/task_specifications/libraries/force_control_task_lib/task_specifications/move_admittance.etasl.lua",
+          "type":"string",
+          "description":"File path of the corresponding task specification"
+        },
+        "parameters":{
+          "type":"object",
+          "description":"List of parameters needed to define an instance of the task specification",
+          "properties":{
+            "K_t":{
+              "oneOf":[{
+                  "type":"number"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":2000,
+              "examples":["$blackboard/output_param/my_task/K_t","$application_defined_parameter"],
+              "description":"Translational stiffness [N/m]. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+            },
+            "K_r":{
+              "oneOf":[{
+                  "type":"number"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":200,
+              "examples":["$blackboard/output_param/my_task/K_r","$application_defined_parameter"],
+              "description":"Rotational stiffness [Nm/rad]. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+            },
+            "tool_COG":{
+              "oneOf":[{
+                  "items":{
+                    "type":"number"
+                  },
+                  "type":"array",
+                  "minItems":3,
+                  "maxItems":3
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":[0,0,0],
+              "examples":["$blackboard/output_param/my_task/tool_COG","$application_defined_parameter"],
+              "description":"Array with the center of gravity of the tool w.r.t FT_sensor_frame [m]. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+            },
+            "task_frame":{
+              "oneOf":[{
+                  "type":"string"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":"tcp_frame",
+              "examples":["$blackboard/output_param/my_task/task_frame","$application_defined_parameter"],
+              "description":"Name of frame used to control the robot in cartesian space. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+            },
+            "activate_angular":{
+              "oneOf":[{
+                  "type":"boolean"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":false,
+              "examples":["$blackboard/output_param/my_task/activate_angular","$application_defined_parameter"],
+              "description":"If true, the angular velocities of the joystick will control the angular velocities of the defined frame. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+            },
+            "torque_threshold":{
+              "oneOf":[{
+                  "type":"number"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":0.05,
+              "examples":["$blackboard/output_param/my_task/torque_threshold","$application_defined_parameter"],
+              "description":"Torque dead zone [Nm]. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+            },
+            "wrench_convention":{
+              "oneOf":[{
+                  "enum":["exerted_on_environment","exerted_on_robot"]
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":"exerted_on_robot",
+              "examples":["$blackboard/output_param/my_task/wrench_convention","$application_defined_parameter"],
+              "description":"Sign convention of the measured wrench: wrench that the robot exerts on the environment (e.g. MuJoCo simulator) or wrench that the environment exerts on the robot. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+            },
+            "activate_linear":{
+              "oneOf":[{
+                  "type":"boolean"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":true,
+              "examples":["$blackboard/output_param/my_task/activate_linear","$application_defined_parameter"],
+              "description":"If true, the linear velocities of the joystick will control the linear velocities of the defined frame. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+            },
+            "tool_weight":{
+              "oneOf":[{
+                  "type":"number"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":0,
+              "examples":["$blackboard/output_param/my_task/tool_weight","$application_defined_parameter"],
+              "description":"Weight of the tool attached to the end-effector [N]. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+            },
+            "FT_sensor_frame":{
+              "oneOf":[{
+                  "type":"string"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":"FT_sensor_frame",
+              "examples":["$blackboard/output_param/my_task/FT_sensor_frame","$application_defined_parameter"],
+              "description":"Name of frame at the force/torque sensor. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+            },
+            "force_threshold":{
+              "oneOf":[{
+                  "type":"number"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":0.5,
+              "examples":["$blackboard/output_param/my_task/force_threshold","$application_defined_parameter"],
+              "description":"Force dead zone [N]. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+            }
+          },
+          "additionalProperties":false,
+          "required":["K_t","K_r","FT_sensor_frame","activate_linear","activate_angular","tool_weight","tool_COG"]
+        }
+      }
+    },
+    "from-force_control_task_lib-version-0.1.0":{
+      "required":["is-move_admittance"],
+      "properties":{
+        "is-move_admittance":{
+          "const":true,
+          "type":"boolean",
+          "description":"Task Specification: move_admittance.etasl.lua\nSet to true to indicate that the task uses the task specification mentioned above. \n Task description: This task specification allows to control the robot with an admittance controller using force/torque sensor data."
+        }
+      }
+    }
+  },
+  "required":["from-force_control_task_lib-version-0.1.0"],
+  "$id":"move_admittance",
+  "title":"Task Specification Configuration"
+}
