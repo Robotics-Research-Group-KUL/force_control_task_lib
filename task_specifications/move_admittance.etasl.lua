@@ -25,22 +25,32 @@ require("math")
 reqs = require("task_requirements")
 
 -- ========================================= PARAMETERS ===================================
-task_description = "This task specification allows to control the robot with an admittance controller using force/torque sensor data."
+task_description = [[Admittance control: the robot is compliant to external forces and torques measured by a force/torque sensor, e.g. to guide it by hand. Along each axis of task_frame the robot moves with a velocity proportional to the external force: K_force*F/K_t [m/s] for translations (if activate_linear) and K_torque*T/K_r [rad/s] for rotations (if activate_angular); i.e. it behaves as a damper with damping K_t/K_force [Ns/m] and K_r/K_torque [Nms/rad] and does not return to its initial pose. Non-activated motions keep their initial value. The measured wrench is read from the input channel named by wrench_input_channel (default "wrench_input") (type wrench, expressed in FT_sensor_frame with its origin as reference point), provided by the robot driver/simulator (e.g. MuJoCo) or by a WrenchInputHandler; it is converted to the wrench acting on the robot (see wrench_convention), passed through a dead zone, compensated for the tool weight and expressed in task_frame with its origin as reference point. The task has no monitor: it runs until it is stopped from outside. Outputs: time, position of task_frame (x_tcp, y_tcp, z_tcp), its pose (tf) and the raw input force (x_force, y_force, z_force, as received on wrench_input).
+Gravity compensation (tool_weight > 0): it assumes that the force/torque sensor was tared with the tool completely vertical, pointing down (the z axis of FT_sensor_frame along gravity, -z of the robot base frame); the tool weight measured in other orientations of the tool is then compensated.]]
 
 param = reqs.parameters(task_description,{
-    reqs.params.scalar({name="K_t", description="Translational stiffness [N/m]", default = 2000, required=true}),
-    reqs.params.scalar({name="K_r", description="Rotational stiffness [Nm/rad]", default = 200, required=true}),
-    reqs.params.string({name="task_frame", description="Name of frame used to control the robot in cartesian space", default = "tcp_frame", required=false}),
-    reqs.params.string({name="FT_sensor_frame", description="Name of frame at the force/torque sensor", default = "FT_sensor_frame", required=true}),
+    reqs.params.scalar({name="K_t", description="Translational stiffness [N/m] used as model of the admittance along the x, y and z axes of task_frame: the velocity is K_force*F/K_t, with F the external force [N]. Higher values make the robot move slower for the same force (it feels heavier); lower values make it more compliant. Must be positive", default = 2000, required=true}),
+    reqs.params.scalar({name="K_r", description="Rotational stiffness [Nm/rad] used as model of the admittance around the x, y and z axes of task_frame: the angular velocity is K_torque*T/K_r, with T the external torque [Nm] w.r.t. the origin of task_frame. Higher values make the robot rotate slower for the same torque; lower values make it more compliant. Must be positive. Only used if activate_angular is true", default = 200, required=true}),
+    reqs.params.string({name="task_frame", description="Name of the robot frame (from the robot model) that is controlled, e.g. the tool center point. The admittance is applied along/around its axes and the torques are taken w.r.t. its origin", default = "tcp_frame", required=false}),
+    reqs.params.string({name="FT_sensor_frame", description="Name of the robot frame (from the robot model) of the force/torque sensor. The measured wrench of the input channel (wrench_input_channel) is expressed in this frame, with its origin as reference point", default = "FT_sensor_frame", required=true}),
     reqs.params.enum({name="wrench_convention", type=reqs.enum_types.string, default="exerted_on_robot",
-                            description="Sign convention of the measured wrench: wrench that the robot exerts on the environment (e.g. MuJoCo simulator) or wrench that the environment exerts on the robot", required=false, accepted_vals = {"exerted_on_environment","exerted_on_robot"}}),
-    reqs.params.bool({name="activate_linear", description="If true, the linear velocities of the joystick will control the linear velocities of the defined frame", default = true, required=true}),
-    reqs.params.bool({name="activate_angular", description="If true, the angular velocities of the joystick will control the angular velocities of the defined frame", default = false, required=true}),
-    reqs.params.scalar({name="force_threshold", description="Force dead zone [N]", default = 0.5, required=false}),
-    reqs.params.scalar({name="torque_threshold", description="Torque dead zone [Nm]", default = 0.05, required=false}),
-    reqs.params.scalar({name="tool_weight", description="Weight of the tool attached to the end-effector [N]", default = 0.0, required=true}),
+                            description="Sign convention of the wrench received on the input channel (wrench_input_channel). exerted_on_environment: it is the wrench that the robot exerts on the environment (e.g. the MuJoCo simulator); it is negated to obtain the wrench acting on the robot. exerted_on_robot: it is the wrench that the environment (e.g. a person guiding the robot) exerts on the robot and is used as is. The robot moves along the wrench acting on it", required=false, accepted_vals = {"exerted_on_environment","exerted_on_robot"}}),
+    reqs.params.bool({name="activate_linear", description="If true, the translations of task_frame are compliant to the external forces (admittance with K_t). If false, the position of task_frame is kept at its initial value", default = true, required=true}),
+    reqs.params.bool({name="activate_angular", description="If true, the rotations of task_frame are compliant to the external torques (admittance with K_r). If false, the orientation of task_frame is kept at its initial value", default = false, required=true}),
+    reqs.params.scalar({name="force_threshold", description="Dead zone [N] applied to each force component of the measured wrench (in FT_sensor_frame): components with an absolute value below it are set to zero and larger ones are reduced by it. It avoids drift due to sensor noise and offsets. 0 disables the dead zone", default = 0.5, required=false}),
+    reqs.params.scalar({name="torque_threshold", description="Dead zone [Nm] applied to each torque component of the measured wrench (in FT_sensor_frame): components with an absolute value below it are set to zero and larger ones are reduced by it. 0 disables the dead zone", default = 0.05, required=false}),
+    reqs.params.scalar({name="tool_weight", description="Weight [N] (gravity force, not mass) of the tool mounted after the force/torque sensor, applied at tool_COG, with gravity along -z of the robot base frame. The gravity compensation assumes that the force/torque sensor was tared with the tool completely vertical, pointing down (the z axis of FT_sensor_frame along gravity): it removes the change of the tool weight measured by the sensor when the tool is in another orientation. 0 disables the gravity compensation (e.g. when the tool weight is negligible, or the simulator does not measure it)", default = 0.0, required=true}),
     reqs.params.array({name="tool_COG", type=reqs.array_types.number, default={0.0, 0.0, 0.0}, 
-                            description="Array with the center of gravity of the tool w.r.t FT_sensor_frame [m]", required=true, minItems = 3, maxItems = 3}),
+                            description="Position [m] of the center of gravity of the tool (everything mounted after the force/torque sensor), as [x,y,z] expressed in FT_sensor_frame. Used for the gravity compensation together with tool_weight", required=true, minItems = 3, maxItems = 3}),
+    reqs.params.scalar({name="K_force", description="Feedback gain [1/s] of the translational admittance constraints (activate_linear true): the velocity is K_force*F/K_t. Higher values make the robot move faster for the same force", default = 4, required=false, minimum = 0.0}),
+    reqs.params.scalar({name="weight_force", description="Weight [-] of the translational admittance constraints relative to the other constraints of the same priority. Only matters when the constraints conflict", default = 1, required=false, minimum = 0.0}),
+    reqs.params.scalar({name="K_torque", description="Feedback gain [1/s] of the rotational admittance constraints (activate_angular true): the angular velocity is K_torque*T/K_r. Higher values make the robot rotate faster for the same torque", default = 4, required=false, minimum = 0.0}),
+    reqs.params.scalar({name="weight_torque", description="Weight [-] of the rotational admittance constraints relative to the other constraints of the same priority. Only matters when the constraints conflict", default = 1, required=false, minimum = 0.0}),
+    reqs.params.scalar({name="K_keep_position", description="Feedback gain [1/s] of the constraint that keeps the initial position of task_frame when activate_linear is false. Higher values correct deviations faster", default = 4, required=false, minimum = 0.0}),
+    reqs.params.scalar({name="weight_keep_position", description="Weight [-] of the constraint that keeps the initial position of task_frame (activate_linear false) relative to the other constraints of the same priority", default = 1, required=false, minimum = 0.0}),
+    reqs.params.scalar({name="K_keep_orientation", description="Feedback gain [1/s] of the constraint that keeps the initial orientation of task_frame when activate_angular is false. Higher values correct deviations faster", default = 4, required=false, minimum = 0.0}),
+    reqs.params.scalar({name="weight_keep_orientation", description="Weight [-] of the constraint that keeps the initial orientation of task_frame (activate_angular false) relative to the other constraints of the same priority", default = 1, required=false, minimum = 0.0}),
+    reqs.params.string({name="wrench_input_channel", description="Name of the input channel (type wrench) from which the measured wrench of the force/torque sensor is read: the varname of the input handler that provides it (e.g. a WrenchInputHandler), or the channel fed directly by the robot driver/simulator (name_expr_cartesian_wrench of the MuJoCo simulator). Change it to use another sensor or input handler", default = "wrench_input", required=false}),
 })
 
 -- ======================================== Robot model requirements ========================================
@@ -57,7 +67,7 @@ FT_sensor_frame = robot.getFrame(param.get("FT_sensor_frame"))
 
 -- ========================================= Variables coming from topic input handlers ===================================
 -- ========================================= Variables coming from topicinput handlers ===================================
-wrench_input   = ctx:createInputChannelWrench("wrench_input")
+wrench_input   = ctx:createInputChannelWrench(param.get("wrench_input_channel"))
 -- wrench_input = wrench(vector(0,0,-5),vector(0,0,0))
 
 K_t = param.get("K_t")
@@ -157,9 +167,9 @@ if param.get("activate_linear") then
         model = -K_t*coord_x(origin(task_frame_inst)),
         meas = Fx,
         target = 0,
-        K = constant(4),
+        K = constant(param.get("K_force")),
         priority = 2,
-        weight = constant(1),
+        weight = constant(param.get("weight_force")),
     };
 
     Constraint{
@@ -168,9 +178,9 @@ if param.get("activate_linear") then
         model = -K_t*coord_y(origin(task_frame_inst)),
         meas = Fy,
         target = 0,
-        K = constant(4),
+        K = constant(param.get("K_force")),
         priority = 2,
-        weight = constant(1),
+        weight = constant(param.get("weight_force")),
     };
 
     Constraint{
@@ -179,9 +189,9 @@ if param.get("activate_linear") then
         model = -K_t*coord_z(origin(task_frame_inst)),
         meas = Fz,
         target = 0,
-        K = constant(4),
+        K = constant(param.get("K_force")),
         priority = 2,
-        weight = constant(1),
+        weight = constant(param.get("weight_force")),
     };
 
 else
@@ -190,8 +200,8 @@ else
         name    = "keep_translation_constant",
         expr    = origin(task_frame_inst),
         target  = initial_value(time, origin(task_frame_inst)),
-        K       = 4,
-        weight  = 1,
+        K       = param.get("K_keep_position"),
+        weight  = param.get("weight_keep_position"),
         priority= 2
     };
 
@@ -205,9 +215,9 @@ if param.get("activate_angular") then
         model = -K_r*coord_x(getRotVec(rotation(task_frame_inst))),
         meas = Tx,
         target = 0,
-        K = constant(4),
+        K = constant(param.get("K_torque")),
         priority = 2,
-        weight = constant(1),
+        weight = constant(param.get("weight_torque")),
     };
 
     Constraint{
@@ -216,9 +226,9 @@ if param.get("activate_angular") then
         model = -K_r*coord_y(getRotVec(rotation(task_frame_inst))),
         meas = Ty,
         target = 0,
-        K = constant(4),
+        K = constant(param.get("K_torque")),
         priority = 2,
-        weight = constant(1),
+        weight = constant(param.get("weight_torque")),
     };
 
     Constraint{
@@ -227,9 +237,9 @@ if param.get("activate_angular") then
         model = -K_r*coord_z(getRotVec(rotation(task_frame_inst))),
         meas = Tz,
         target = 0,
-        K = constant(4),
+        K = constant(param.get("K_torque")),
         priority = 2,
-        weight = constant(1),
+        weight = constant(param.get("weight_torque")),
     };
 else
     intial_rot=initial_value(time,rotation(task_frame))
@@ -237,9 +247,9 @@ else
         context         = ctx,
         name            = "keep_rot",
         expr            = rotation(task_frame)*inv(intial_rot),
-        weight          = 1,
+        weight          = param.get("weight_keep_orientation"),
         priority        = 2,
-        K               = 4
+        K               = param.get("K_keep_orientation")
     };
 end
 -- -- Constant orientation

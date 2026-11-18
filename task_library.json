@@ -3,7 +3,7 @@
     "name": "force_control_task_lib",
     "description": "Library with eTaSL task specifications for force control tasks for Crospi",
     "license": "GNU GPLv3",
-    "version": "0.1.0",
+    "version": "1.0.1",
     "authors": [
         {
             "name": "Santiago Iregui",

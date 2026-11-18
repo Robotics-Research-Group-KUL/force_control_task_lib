@@ -50,30 +50,35 @@ require("math")
 
 reqs = require("task_requirements")
 
-task_description = "This task specification implements 2D contour following with the task frame formalism: force control along the normal of the contour, velocity control along its tangent, and constant height and orientation of the tool. The task frame rotates around the tool axis to track the normal of the contour, estimated from the measured contact force. The robot must already be in contact with the contour when the task starts. The task finishes after travelling the specified path length."
+task_description = [[2D contour following with the task frame formalism. The robot must already be in contact with the contour when the task starts (e.g. after a guarded motion); the contour lies in a plane perpendicular to the z-axis of the contact frame (task_frame*tf_2_contact_frame). A task frame with its origin at the contact frame rotates around that z-axis so that its x-axis follows the measured contact force (the normal of the contour, pointing from the contour towards the robot) and its y-axis is tangent to the contour. In this task frame the robot controls the normal contact force to normal_force (x), moves with tangential_velocity along the contour (y, ramped up during ramp_up_time), and keeps its initial position along z and its initial orientation (only the task frame rotates, which suits rotationally symmetric tools). The measured wrench is read from the input channel named by wrench_input_channel (default "wrench_input") (type wrench, expressed in FT_sensor_frame with its origin as reference point), provided by the robot driver/simulator (e.g. MuJoCo) or by a WrenchInputHandler; it is low-pass filtered, converted to the wrench acting on the robot (see wrench_convention) and compensated for the tool weight. The task finishes (monitor action "exit") when the origin of the contact frame has travelled path_length. Outputs: pose of the contact frame (x_tf, y_tf, z_tf, roll_tf, pitch_tf, yaw_tf), external force on the robot in the task frame and torque in the contact frame (x_force ... z_torque), normal_force, tangential_force, normal_angle, travelled_distance and tangential_speed.]]
 
 
 -- ========================================= PARAMETERS ===================================
 param = reqs.parameters(task_description,{
-    reqs.params.string({name="task_frame", description="Name of frame used to control the robot in cartesian space", default = "tcp_frame", required=true}),
-    reqs.params.string({name="FT_sensor_frame", description="Name of frame where the forces and torques are measured", default = "FT_sensor_frame", required=true}),
+    reqs.params.string({name="task_frame", description="Name of the robot frame (from the robot model) that is controlled, e.g. the tool center point. The contact frame is defined w.r.t. this frame by tf_2_contact_frame", default = "tcp_frame", required=true}),
+    reqs.params.string({name="FT_sensor_frame", description="Name of the robot frame (from the robot model) of the force/torque sensor. The measured wrench of the input channel (wrench_input_channel) is expressed in this frame, with its origin as reference point", default = "FT_sensor_frame", required=true}),
     reqs.params.array({name="tf_2_contact_frame", type=reqs.array_types.number, default={0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0},
-                            description="Transformation from the task_frame to the contact frame in [x,y,z,qx,qy,qz,qw]. The z-axis of the contact frame must be perpendicular to the plane of the contour (e.g. along the axis of a cylindrical tool)", required=true, minItems = 7, maxItems = 7}),
+                            description="Pose of the contact frame w.r.t. task_frame, as [x,y,z,qx,qy,qz,qw] (position in m, unit quaternion with the real part qw last), expressed in task_frame. The origin should be at the contact point (e.g. on the axis of a cylindrical tool at the height of the contour) and the z-axis must be perpendicular to the plane of the contour (e.g. along the axis of a cylindrical tool). The default is the identity (contact frame = task_frame)", required=true, minItems = 7, maxItems = 7}),
     reqs.params.enum({name="wrench_convention", type=reqs.enum_types.string, default="exerted_on_environment",
-                            description="Sign convention of the measured wrench: wrench that the robot exerts on the environment (e.g. MuJoCo simulator) or wrench that the environment exerts on the robot", required=true, accepted_vals = {"exerted_on_environment","exerted_on_robot"}}),
-    reqs.params.scalar({name="normal_force", description="Desired contact force [N] normal to the contour (pushing against the contour)", default = 10.0, required=true, minimum = 0.0}),
-    reqs.params.scalar({name="tangential_velocity", description="Desired velocity [m/s] along the tangent of the contour. The sign selects the direction of motion along the contour", default = 0.02, required=true, minimum = -0.2, maximum = 0.2}),
-    reqs.params.scalar({name="ramp_up_time", description="Time [s] to linearly increase the tangential velocity from zero to tangential_velocity, while the task frame aligns with the contour", default = 3.0, required=true, minimum = 0.0}),
-    reqs.params.scalar({name="path_length", description="Distance [m] travelled along the contour after which the task finishes", default = 0.5, required=true, minimum = 0.0}),
-    reqs.params.scalar({name="contact_stiffness", description="Estimated stiffness [N/m] of the contact (environment + robot) in the normal direction", default = 5000.0, required=true, minimum = 0.0}),
-    reqs.params.scalar({name="K_force", description="Feedback gain [1/s] of the normal force control", default = 8.0, required=true, minimum = 0.0}),
-    reqs.params.scalar({name="K_tracking", description="Feedback gain [1/s] of the rotation of the task frame that tracks the normal of the contour", default = 1.0, required=true, minimum = 0.0}),
-    reqs.params.scalar({name="K_hold", description="Feedback gain [1/s] to keep the initial position along the tool axis and the initial orientation of the tool", default = 4.0, required=true, minimum = 0.0}),
+                            description="Sign convention of the wrench received on the input channel (wrench_input_channel). exerted_on_environment: it is the wrench that the robot exerts on the environment (e.g. the MuJoCo simulator); it is negated to obtain the wrench acting on the robot. exerted_on_robot: it is the wrench that the environment exerts on the robot and is used as is. All forces in this task (normal_force, outputs) are forces acting on the robot", required=true, accepted_vals = {"exerted_on_environment","exerted_on_robot"}}),
+    reqs.params.scalar({name="normal_force", description="Desired contact force [N] normal to the contour, i.e. the force with which the robot pushes against the contour. It is controlled along the x-axis of the task frame (normal of the contour) as the force that the contour exerts on the robot", default = 10.0, required=true, minimum = 0.0}),
+    reqs.params.scalar({name="tangential_velocity", description="Desired velocity [m/s] of the contact frame along the tangent of the contour (y-axis of the task frame, i.e. the z-axis of the contact frame crossed with the contour normal pointing towards the robot). The sign selects the direction of motion along the contour", default = 0.02, required=true, minimum = -0.2, maximum = 0.2}),
+    reqs.params.scalar({name="ramp_up_time", description="Time [s] to linearly increase the tangential velocity from zero to tangential_velocity at the start of the task, so that the task frame can first align with the contour. 0 means no ramp (full velocity from the start)", default = 3.0, required=true, minimum = 0.0}),
+    reqs.params.scalar({name="path_length", description="Distance [m] travelled by the origin of the contact frame (integral of its speed, in any direction) after which the task finishes", default = 0.5, required=true, minimum = 0.0}),
+    reqs.params.scalar({name="contact_stiffness", description="Estimated stiffness [N/m] of the contact (environment + robot + tool) in the normal direction, used as model of the force control: the velocity towards the contour is K_force*(normal_force - measured normal force)/contact_stiffness. A lower value gives faster but possibly oscillating force control, a higher value slower force control", default = 5000.0, required=true, minimum = 0.0}),
+    reqs.params.scalar({name="K_force", description="Feedback gain [1/s] of the normal force control (inverse of its time constant). Higher values correct force errors faster, but too high values cause oscillations or loss of contact", default = 8.0, required=true, minimum = 0.0}),
+    reqs.params.scalar({name="K_tracking", description="Feedback gain [1/s] of the rotation of the task frame around the z-axis of the contact frame: its angular velocity [rad/s] is K_tracking times the angle [rad] between the x-axis of the task frame and the measured contact force. Higher values track sharper curvatures, but are more sensitive to force noise", default = 1.0, required=true, minimum = 0.0}),
+    reqs.params.scalar({name="K_hold", description="Feedback gain [1/s] to keep the initial position along the z-axis of the contact frame and the initial orientation of the tool. Higher values correct deviations faster", default = 4.0, required=true, minimum = 0.0}),
     reqs.params.array({name="tool_COG", type=reqs.array_types.number, default={0.0, 0.0, 0.0},
-                            description="Array with the center of gravity of the tool w.r.t FT_sensor_frame [m]", required=true, minItems = 3, maxItems = 3}),
-    reqs.params.scalar({name="tool_weight", description="Weight of the tool attached to the force/torque sensor [N]", default = 0.0, required=true, minimum = 0.0}),
-    reqs.params.scalar({name="filter_cutoff_frequency", description="Cut-off frequency [Hz] of the Butterworth low-pass filter applied to the measured wrench. Set to 0 to disable the filter. Keep it well below the Nyquist frequency of the controller (e.g. <= 10 Hz at 100 Hz)", default = 5.0, required=true, minimum = 0.0, maximum = 10.0}),
-    reqs.params.int({name="filter_order", description="Order of the Butterworth low-pass filter (2, 3 or 4)", default = 2, required=true, minimum = 2, maximum = 4}),
+                            description="Position [m] of the center of gravity of the tool (everything mounted after the force/torque sensor), as [x,y,z] expressed in FT_sensor_frame. Used for the gravity compensation together with tool_weight", required=true, minItems = 3, maxItems = 3}),
+    reqs.params.scalar({name="tool_weight", description="Weight [N] (gravity force, not mass) of the tool mounted after the force/torque sensor. Its wrench (gravity along -z of the robot base frame, applied at tool_COG) is subtracted from the measured wrench. 0 disables the gravity compensation (e.g. when the sensor is tared or the simulator does not measure the tool weight)", default = 0.0, required=true, minimum = 0.0}),
+    reqs.params.scalar({name="filter_cutoff_frequency", description="Cut-off frequency [Hz] of the Butterworth low-pass filter applied to each component of the measured wrench. 0 disables the filter. Lower values give a smoother but more delayed force signal. Keep it well below the Nyquist frequency of the controller (e.g. <= 10 Hz at 100 Hz)", default = 5.0, required=true, minimum = 0.0, maximum = 10.0}),
+    reqs.params.int({name="filter_order", description="Order of the Butterworth low-pass filter (2, 3 or 4). A higher order attenuates high frequencies more, but adds more delay", default = 2, required=true, minimum = 2, maximum = 4}),
+    reqs.params.scalar({name="weight_normal_force", description="Weight [-] of the normal force control constraint (x-axis of the task frame) relative to the other constraints of the same priority. Only matters when the constraints conflict", default = 1, required=false, minimum = 0.0}),
+    reqs.params.scalar({name="weight_tangential_velocity", description="Weight [-] of the tangential velocity constraint (y-axis of the task frame) relative to the other constraints of the same priority. Only matters when the constraints conflict", default = 1, required=false, minimum = 0.0}),
+    reqs.params.scalar({name="weight_hold", description="Weight [-] of the constraints that keep the initial position along the z-axis of the contact frame and the initial orientation of the tool, relative to the other constraints of the same priority. Only matters when the constraints conflict", default = 1, required=false, minimum = 0.0}),
+    reqs.params.scalar({name="weight_tracking", description="Weight [-] of the constraint that rotates the task frame towards the measured contact force (tracking of the contour normal), relative to the other constraints of the same priority", default = 1, required=false, minimum = 0.0}),
+    reqs.params.string({name="wrench_input_channel", description="Name of the input channel (type wrench) from which the measured wrench of the force/torque sensor is read: the varname of the input handler that provides it (e.g. a WrenchInputHandler), or the channel fed directly by the robot driver/simulator (name_expr_cartesian_wrench of the MuJoCo simulator). Change it to use another sensor or input handler", default = "wrench_input", required=false}),
 })
 
 
@@ -116,7 +121,7 @@ contact_frame = task_frame*tf_2_contact_frame
 
 -- ========================================= FORCE MEASUREMENTS ===================================
 -- Wrench measured by the F/T sensor, expressed in FT_sensor_frame with its origin as reference point
-raw_wrench = ctx:createInputChannelWrench("wrench_input")
+raw_wrench = ctx:createInputChannelWrench(param.get("wrench_input_channel"))
 
 -- 0) Low-pass filter each component of the raw measurement (Butterworth filter, see utilities/filters_etasl.lua).
 --    The filter is added to the eTaSL controller: its states are feature variables that start at zero.
@@ -202,7 +207,7 @@ Constraint{
     target   = normal_force,
     K        = K_force,
     priority = 2,
-    weight   = 1
+    weight   = param.get("weight_normal_force")
 };
 
 -- y-direction: tangential velocity, linearly increasing during ramp_up_time
@@ -216,7 +221,7 @@ Constraint{
     expr     = coord_y(pos_tf) - make_constant(ramp*tangential_velocity)*time,
     K        = 0,
     priority = 2,
-    weight   = 1
+    weight   = param.get("weight_tangential_velocity")
 };
 
 -- z-direction: keep the initial position along the tool axis
@@ -226,7 +231,7 @@ Constraint{
     expr     = coord_z(origin(inv(start_pose)*contact_frame)),
     K        = K_hold,
     priority = 2,
-    weight   = 1
+    weight   = param.get("weight_hold")
 };
 
 -- Keep the initial orientation of the tool (the robot does not rotate, only the task frame)
@@ -236,7 +241,7 @@ Constraint{
     expr     = rotation(inv(start_pose)*contact_frame),
     K        = K_hold,
     priority = 2,
-    weight   = 1
+    weight   = param.get("weight_hold")
 };
 
 -- Rotation of the task frame around z: rotate with an angular velocity proportional to the angle
@@ -248,7 +253,7 @@ Constraint{
     expr     = alpha - make_constant(K_tracking*atan2(Fy_tf, Fx_tf))*time,
     K        = 0,
     priority = 2,
-    weight   = 1
+    weight   = param.get("weight_tracking")
 };
 
 

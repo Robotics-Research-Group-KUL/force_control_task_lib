@@ -2,15 +2,25 @@
   "type":"object",
   "description":"Parameters needed to the corresponding task specification in eTaSL",
   "properties":{
-    "from-force_control_task_lib-version-0.1.0":{
+    "from-force_control_task_lib-version-1.0.1":{
       "const":true,
       "type":"boolean",
-      "description":"Library force_control_task_lib version 0.1.0.\n Set to true to indicate that task specification comes from the library above. \n Library description: Library with eTaSL task specifications for force control tasks for Crospi\nAuthors: Santiago Iregui (KU Leuven), Erwin Aertbeliën (KU Leuven), Federico Ulloa (KU Leuven)"
+      "description":"Library force_control_task_lib version 1.0.1.\n Set to true to indicate that task specification comes from the library above. \n Library description: Library with eTaSL task specifications for force control tasks for Crospi\nAuthors: Santiago Iregui (KU Leuven), Erwin Aertbeliën (KU Leuven), Federico Ulloa (KU Leuven)"
     }
   },
   "$schema":"http://json-schema.org/draft-06/schema#",
   "additionalProperties":true,
   "dependencies":{
+    "from-force_control_task_lib-version-1.0.1":{
+      "required":["is-move_admittance"],
+      "properties":{
+        "is-move_admittance":{
+          "const":true,
+          "type":"boolean",
+          "description":"Task Specification: move_admittance.etasl.lua\nSet to true to indicate that the task uses the task specification mentioned above. \n Task description: Admittance control: the robot is compliant to external forces and torques measured by a force/torque sensor, e.g. to guide it by hand. Along each axis of task_frame the robot moves with a velocity proportional to the external force: K_force*F/K_t [m/s] for translations (if activate_linear) and K_torque*T/K_r [rad/s] for rotations (if activate_angular); i.e. it behaves as a damper with damping K_t/K_force [Ns/m] and K_r/K_torque [Nms/rad] and does not return to its initial pose. Non-activated motions keep their initial value. The measured wrench is read from the input channel named by wrench_input_channel (default \"wrench_input\") (type wrench, expressed in FT_sensor_frame with its origin as reference point), provided by the robot driver/simulator (e.g. MuJoCo) or by a WrenchInputHandler; it is converted to the wrench acting on the robot (see wrench_convention), passed through a dead zone, compensated for the tool weight and expressed in task_frame with its origin as reference point. The task has no monitor: it runs until it is stopped from outside. Outputs: time, position of task_frame (x_tcp, y_tcp, z_tcp), its pose (tf) and the raw input force (x_force, y_force, z_force, as received on wrench_input).\nGravity compensation (tool_weight > 0): it assumes that the force/torque sensor was tared with the tool completely vertical, pointing down (the z axis of FT_sensor_frame along gravity, -z of the robot base frame); the tool weight measured in other orientations of the tool is then compensated."
+        }
+      }
+    },
     "is-move_admittance":{
       "required":["file_path","parameters"],
       "properties":{
@@ -23,9 +33,9 @@
           "type":"object",
           "description":"List of parameters needed to define an instance of the task specification",
           "properties":{
-            "K_t":{
+            "FT_sensor_frame":{
               "oneOf":[{
-                  "type":"number"
+                  "type":"string"
                 },{
                   "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
                   "type":"string"
@@ -33,9 +43,9 @@
                   "const":"$application_defined_parameter",
                   "type":"string"
                 }],
-              "default":2000,
-              "examples":["$blackboard/output_param/my_task/K_t","$application_defined_parameter"],
-              "description":"Translational stiffness [N/m]. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+              "default":"FT_sensor_frame",
+              "examples":["$blackboard/output_param/my_task/FT_sensor_frame","$application_defined_parameter"],
+              "description":"Name of the robot frame (from the robot model) of the force/torque sensor. The measured wrench of the input channel (wrench_input_channel) is expressed in this frame, with its origin as reference point"
             },
             "K_r":{
               "oneOf":[{
@@ -49,7 +59,7 @@
                 }],
               "default":200,
               "examples":["$blackboard/output_param/my_task/K_r","$application_defined_parameter"],
-              "description":"Rotational stiffness [Nm/rad]. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+              "description":"Rotational stiffness [Nm/rad] used as model of the admittance around the x, y and z axes of task_frame: the angular velocity is K_torque*T/K_r, with T the external torque [Nm] w.r.t. the origin of task_frame. Higher values make the robot rotate slower for the same torque; lower values make it more compliant. Must be positive. Only used if activate_angular is true"
             },
             "tool_COG":{
               "oneOf":[{
@@ -68,7 +78,7 @@
                 }],
               "default":[0,0,0],
               "examples":["$blackboard/output_param/my_task/tool_COG","$application_defined_parameter"],
-              "description":"Array with the center of gravity of the tool w.r.t FT_sensor_frame [m]. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+              "description":"Position [m] of the center of gravity of the tool (everything mounted after the force/torque sensor), as [x,y,z] expressed in FT_sensor_frame. Used for the gravity compensation together with tool_weight"
             },
             "task_frame":{
               "oneOf":[{
@@ -82,7 +92,7 @@
                 }],
               "default":"tcp_frame",
               "examples":["$blackboard/output_param/my_task/task_frame","$application_defined_parameter"],
-              "description":"Name of frame used to control the robot in cartesian space. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+              "description":"Name of the robot frame (from the robot model) that is controlled, e.g. the tool center point. The admittance is applied along/around its axes and the torques are taken w.r.t. its origin"
             },
             "activate_angular":{
               "oneOf":[{
@@ -96,10 +106,11 @@
                 }],
               "default":false,
               "examples":["$blackboard/output_param/my_task/activate_angular","$application_defined_parameter"],
-              "description":"If true, the angular velocities of the joystick will control the angular velocities of the defined frame. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+              "description":"If true, the rotations of task_frame are compliant to the external torques (admittance with K_r). If false, the orientation of task_frame is kept at its initial value"
             },
-            "torque_threshold":{
+            "weight_keep_position":{
               "oneOf":[{
+                  "minimum":0,
                   "type":"number"
                 },{
                   "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
@@ -108,13 +119,14 @@
                   "const":"$application_defined_parameter",
                   "type":"string"
                 }],
-              "default":0.05,
-              "examples":["$blackboard/output_param/my_task/torque_threshold","$application_defined_parameter"],
-              "description":"Torque dead zone [Nm]. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+              "default":1,
+              "examples":["$blackboard/output_param/my_task/weight_keep_position","$application_defined_parameter"],
+              "description":"Weight [-] of the constraint that keeps the initial position of task_frame (activate_linear false) relative to the other constraints of the same priority"
             },
-            "wrench_convention":{
+            "K_force":{
               "oneOf":[{
-                  "enum":["exerted_on_environment","exerted_on_robot"]
+                  "minimum":0,
+                  "type":"number"
                 },{
                   "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
                   "type":"string"
@@ -122,23 +134,9 @@
                   "const":"$application_defined_parameter",
                   "type":"string"
                 }],
-              "default":"exerted_on_robot",
-              "examples":["$blackboard/output_param/my_task/wrench_convention","$application_defined_parameter"],
-              "description":"Sign convention of the measured wrench: wrench that the robot exerts on the environment (e.g. MuJoCo simulator) or wrench that the environment exerts on the robot. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
-            },
-            "activate_linear":{
-              "oneOf":[{
-                  "type":"boolean"
-                },{
-                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
-                  "type":"string"
-                },{
-                  "const":"$application_defined_parameter",
-                  "type":"string"
-                }],
-              "default":true,
-              "examples":["$blackboard/output_param/my_task/activate_linear","$application_defined_parameter"],
-              "description":"If true, the linear velocities of the joystick will control the linear velocities of the defined frame. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+              "default":4,
+              "examples":["$blackboard/output_param/my_task/K_force","$application_defined_parameter"],
+              "description":"Feedback gain [1/s] of the translational admittance constraints (activate_linear true): the velocity is K_force*F/K_t. Higher values make the robot move faster for the same force"
             },
             "tool_weight":{
               "oneOf":[{
@@ -152,21 +150,7 @@
                 }],
               "default":0,
               "examples":["$blackboard/output_param/my_task/tool_weight","$application_defined_parameter"],
-              "description":"Weight of the tool attached to the end-effector [N]. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
-            },
-            "FT_sensor_frame":{
-              "oneOf":[{
-                  "type":"string"
-                },{
-                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
-                  "type":"string"
-                },{
-                  "const":"$application_defined_parameter",
-                  "type":"string"
-                }],
-              "default":"FT_sensor_frame",
-              "examples":["$blackboard/output_param/my_task/FT_sensor_frame","$application_defined_parameter"],
-              "description":"Name of frame at the force/torque sensor. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+              "description":"Weight [N] (gravity force, not mass) of the tool mounted after the force/torque sensor, applied at tool_COG, with gravity along -z of the robot base frame. The gravity compensation assumes that the force/torque sensor was tared with the tool completely vertical, pointing down (the z axis of FT_sensor_frame along gravity): it removes the change of the tool weight measured by the sensor when the tool is in another orientation. 0 disables the gravity compensation (e.g. when the tool weight is negligible, or the simulator does not measure it)"
             },
             "force_threshold":{
               "oneOf":[{
@@ -180,26 +164,176 @@
                 }],
               "default":0.5,
               "examples":["$blackboard/output_param/my_task/force_threshold","$application_defined_parameter"],
-              "description":"Force dead zone [N]. \nSet as a string beginning with $blackboard such as `$blackboard/output_param/my_task/my_param` if the value is not yet known and thus will be set externally at runtime (only once) depending on e.g. the outcome of a previous action or the outcome of another module.\nSet as $application_defined_parameter to indicate that the parameter is defined by the application and not by the skill specification."
+              "description":"Dead zone [N] applied to each force component of the measured wrench (in FT_sensor_frame): components with an absolute value below it are set to zero and larger ones are reduced by it. It avoids drift due to sensor noise and offsets. 0 disables the dead zone"
+            },
+            "K_keep_position":{
+              "oneOf":[{
+                  "minimum":0,
+                  "type":"number"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":4,
+              "examples":["$blackboard/output_param/my_task/K_keep_position","$application_defined_parameter"],
+              "description":"Feedback gain [1/s] of the constraint that keeps the initial position of task_frame when activate_linear is false. Higher values correct deviations faster"
+            },
+            "weight_torque":{
+              "oneOf":[{
+                  "minimum":0,
+                  "type":"number"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":1,
+              "examples":["$blackboard/output_param/my_task/weight_torque","$application_defined_parameter"],
+              "description":"Weight [-] of the rotational admittance constraints relative to the other constraints of the same priority. Only matters when the constraints conflict"
+            },
+            "K_torque":{
+              "oneOf":[{
+                  "minimum":0,
+                  "type":"number"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":4,
+              "examples":["$blackboard/output_param/my_task/K_torque","$application_defined_parameter"],
+              "description":"Feedback gain [1/s] of the rotational admittance constraints (activate_angular true): the angular velocity is K_torque*T/K_r. Higher values make the robot rotate faster for the same torque"
+            },
+            "torque_threshold":{
+              "oneOf":[{
+                  "type":"number"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":0.05,
+              "examples":["$blackboard/output_param/my_task/torque_threshold","$application_defined_parameter"],
+              "description":"Dead zone [Nm] applied to each torque component of the measured wrench (in FT_sensor_frame): components with an absolute value below it are set to zero and larger ones are reduced by it. 0 disables the dead zone"
+            },
+            "weight_force":{
+              "oneOf":[{
+                  "minimum":0,
+                  "type":"number"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":1,
+              "examples":["$blackboard/output_param/my_task/weight_force","$application_defined_parameter"],
+              "description":"Weight [-] of the translational admittance constraints relative to the other constraints of the same priority. Only matters when the constraints conflict"
+            },
+            "wrench_convention":{
+              "oneOf":[{
+                  "enum":["exerted_on_environment","exerted_on_robot"]
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":"exerted_on_robot",
+              "examples":["$blackboard/output_param/my_task/wrench_convention","$application_defined_parameter"],
+              "description":"Sign convention of the wrench received on the input channel (wrench_input_channel). exerted_on_environment: it is the wrench that the robot exerts on the environment (e.g. the MuJoCo simulator); it is negated to obtain the wrench acting on the robot. exerted_on_robot: it is the wrench that the environment (e.g. a person guiding the robot) exerts on the robot and is used as is. The robot moves along the wrench acting on it"
+            },
+            "activate_linear":{
+              "oneOf":[{
+                  "type":"boolean"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":true,
+              "examples":["$blackboard/output_param/my_task/activate_linear","$application_defined_parameter"],
+              "description":"If true, the translations of task_frame are compliant to the external forces (admittance with K_t). If false, the position of task_frame is kept at its initial value"
+            },
+            "wrench_input_channel":{
+              "oneOf":[{
+                  "type":"string"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":"wrench_input",
+              "examples":["$blackboard/output_param/my_task/wrench_input_channel","$application_defined_parameter"],
+              "description":"Name of the input channel (type wrench) from which the measured wrench of the force/torque sensor is read: the varname of the input handler that provides it (e.g. a WrenchInputHandler), or the channel fed directly by the robot driver/simulator (name_expr_cartesian_wrench of the MuJoCo simulator). Change it to use another sensor or input handler"
+            },
+            "weight_keep_orientation":{
+              "oneOf":[{
+                  "minimum":0,
+                  "type":"number"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":1,
+              "examples":["$blackboard/output_param/my_task/weight_keep_orientation","$application_defined_parameter"],
+              "description":"Weight [-] of the constraint that keeps the initial orientation of task_frame (activate_angular false) relative to the other constraints of the same priority"
+            },
+            "K_keep_orientation":{
+              "oneOf":[{
+                  "minimum":0,
+                  "type":"number"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":4,
+              "examples":["$blackboard/output_param/my_task/K_keep_orientation","$application_defined_parameter"],
+              "description":"Feedback gain [1/s] of the constraint that keeps the initial orientation of task_frame when activate_angular is false. Higher values correct deviations faster"
+            },
+            "K_t":{
+              "oneOf":[{
+                  "type":"number"
+                },{
+                  "pattern":"^\\$blackboard(/[a-zA-Z0-9_\\-]+)+$",
+                  "type":"string"
+                },{
+                  "const":"$application_defined_parameter",
+                  "type":"string"
+                }],
+              "default":2000,
+              "examples":["$blackboard/output_param/my_task/K_t","$application_defined_parameter"],
+              "description":"Translational stiffness [N/m] used as model of the admittance along the x, y and z axes of task_frame: the velocity is K_force*F/K_t, with F the external force [N]. Higher values make the robot move slower for the same force (it feels heavier); lower values make it more compliant. Must be positive"
             }
           },
           "additionalProperties":false,
           "required":["K_t","K_r","FT_sensor_frame","activate_linear","activate_angular","tool_weight","tool_COG"]
         }
       }
-    },
-    "from-force_control_task_lib-version-0.1.0":{
-      "required":["is-move_admittance"],
-      "properties":{
-        "is-move_admittance":{
-          "const":true,
-          "type":"boolean",
-          "description":"Task Specification: move_admittance.etasl.lua\nSet to true to indicate that the task uses the task specification mentioned above. \n Task description: This task specification allows to control the robot with an admittance controller using force/torque sensor data."
-        }
-      }
     }
   },
-  "required":["from-force_control_task_lib-version-0.1.0"],
+  "required":["from-force_control_task_lib-version-1.0.1"],
   "$id":"move_admittance",
   "title":"Task Specification Configuration"
 }
