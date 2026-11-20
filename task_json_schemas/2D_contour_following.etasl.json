@@ -2,16 +2,16 @@
   "type":"object",
   "description":"Parameters needed to the corresponding task specification in eTaSL",
   "properties":{
-    "from-force_control_task_lib-version-1.0.2":{
+    "from-force_control_task_lib-version-1.0.3":{
       "const":true,
       "type":"boolean",
-      "description":"Library force_control_task_lib version 1.0.2.\n Set to true to indicate that task specification comes from the library above. \n Library description: Library with eTaSL task specifications for force control tasks for Crospi\nAuthors: Santiago Iregui (KU Leuven), Erwin Aertbeliën (KU Leuven), Federico Ulloa (KU Leuven)"
+      "description":"Library force_control_task_lib version 1.0.3.\n Set to true to indicate that task specification comes from the library above. \n Library description: Library with eTaSL task specifications for force control tasks for Crospi\nAuthors: Santiago Iregui (KU Leuven), Erwin Aertbeliën (KU Leuven), Federico Ulloa (KU Leuven)"
     }
   },
   "$schema":"http://json-schema.org/draft-06/schema#",
   "additionalProperties":true,
   "dependencies":{
-    "from-force_control_task_lib-version-1.0.2":{
+    "from-force_control_task_lib-version-1.0.3":{
       "required":["is-2D_contour_following"],
       "properties":{
         "is-2D_contour_following":{
@@ -362,7 +362,7 @@
       }
     }
   },
-  "required":["from-force_control_task_lib-version-1.0.2"],
+  "required":["from-force_control_task_lib-version-1.0.3"],
   "$id":"2D_contour_following",
   "title":"Task Specification Configuration"
 }
