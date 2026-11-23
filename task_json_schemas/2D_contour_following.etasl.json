@@ -11,16 +11,6 @@
   "$schema":"http://json-schema.org/draft-06/schema#",
   "additionalProperties":true,
   "dependencies":{
-    "from-force_control_task_lib-version-1.0.3":{
-      "required":["is-2D_contour_following"],
-      "properties":{
-        "is-2D_contour_following":{
-          "const":true,
-          "type":"boolean",
-          "description":"Task Specification: 2D_contour_following.etasl.lua\nSet to true to indicate that the task uses the task specification mentioned above. \n Task description: 2D contour following with the task frame formalism. The robot must already be in contact with the contour when the task starts (e.g. after a guarded motion); the contour lies in a plane perpendicular to the z-axis of the contact frame (task_frame*tf_2_contact_frame). A task frame with its origin at the contact frame rotates around that z-axis so that its x-axis follows the measured contact force (the normal of the contour, pointing from the contour towards the robot) and its y-axis is tangent to the contour. In this task frame the robot controls the normal contact force to normal_force (x), moves with tangential_velocity along the contour (y, ramped up during ramp_up_time), and keeps its initial position along z and its initial orientation (only the task frame rotates, which suits rotationally symmetric tools). The measured wrench is read from the input channel named by wrench_input_channel (default \"wrench_input\") (type wrench, expressed in FT_sensor_frame with its origin as reference point), provided by the robot driver/simulator (e.g. MuJoCo) or by a WrenchInputHandler; it is low-pass filtered, converted to the wrench acting on the robot (see wrench_convention) and compensated for the tool weight. The task finishes (monitor action \"exit\") when the origin of the contact frame has travelled path_length. Outputs: pose of the contact frame (x_tf, y_tf, z_tf, roll_tf, pitch_tf, yaw_tf), external force on the robot in the task frame and torque in the contact frame (x_force ... z_torque), normal_force, tangential_force, normal_angle, travelled_distance and tangential_speed."
-        }
-      }
-    },
     "is-2D_contour_following":{
       "required":["file_path","parameters"],
       "properties":{
@@ -358,6 +348,16 @@
           },
           "additionalProperties":false,
           "required":["task_frame","FT_sensor_frame","tf_2_contact_frame","wrench_convention","normal_force","tangential_velocity","ramp_up_time","path_length","contact_stiffness","K_force","K_tracking","K_hold","tool_COG","tool_weight","filter_cutoff_frequency","filter_order"]
+        }
+      }
+    },
+    "from-force_control_task_lib-version-1.0.3":{
+      "required":["is-2D_contour_following"],
+      "properties":{
+        "is-2D_contour_following":{
+          "const":true,
+          "type":"boolean",
+          "description":"Task Specification: 2D_contour_following.etasl.lua\nSet to true to indicate that the task uses the task specification mentioned above. \n Task description: 2D contour following with the task frame formalism. The robot must already be in contact with the contour when the task starts (e.g. after a guarded motion); the contour lies in a plane perpendicular to the z-axis of the contact frame (task_frame*tf_2_contact_frame). A task frame with its origin at the contact frame rotates around that z-axis so that its x-axis follows the measured contact force (the normal of the contour, pointing from the contour towards the robot) and its y-axis is tangent to the contour. In this task frame the robot controls the normal contact force to normal_force (x), moves with tangential_velocity along the contour (y, ramped up during ramp_up_time), and keeps its initial position along z and its initial orientation (only the task frame rotates, which suits rotationally symmetric tools). The measured wrench is read from the input channel named by wrench_input_channel (default \"wrench_input\") (type wrench, expressed in FT_sensor_frame with its origin as reference point), provided by the robot driver/simulator (e.g. MuJoCo) or by a WrenchInputHandler; it is low-pass filtered, converted to the wrench acting on the robot (see wrench_convention) and compensated for the tool weight. The task finishes (monitor action \"exit\") when the origin of the contact frame has travelled path_length. Outputs: pose of the contact frame (x_tf, y_tf, z_tf, roll_tf, pitch_tf, yaw_tf), external force on the robot in the task frame and torque in the contact frame (x_force ... z_torque), normal_force, tangential_force, normal_angle, travelled_distance and tangential_speed."
         }
       }
     }

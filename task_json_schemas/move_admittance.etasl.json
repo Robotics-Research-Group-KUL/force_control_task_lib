@@ -11,16 +11,6 @@
   "$schema":"http://json-schema.org/draft-06/schema#",
   "additionalProperties":true,
   "dependencies":{
-    "from-force_control_task_lib-version-1.0.3":{
-      "required":["is-move_admittance"],
-      "properties":{
-        "is-move_admittance":{
-          "const":true,
-          "type":"boolean",
-          "description":"Task Specification: move_admittance.etasl.lua\nSet to true to indicate that the task uses the task specification mentioned above. \n Task description: Admittance control: the robot is compliant to external forces and torques measured by a force/torque sensor, e.g. to guide it by hand. Along each axis of task_frame the robot moves with a velocity proportional to the external force: K_force*F/K_t [m/s] for translations (if activate_linear) and K_torque*T/K_r [rad/s] for rotations (if activate_angular); i.e. it behaves as a damper with damping K_t/K_force [Ns/m] and K_r/K_torque [Nms/rad] and does not return to its initial pose. Non-activated motions keep their initial value. The measured wrench is read from the input channel named by wrench_input_channel (default \"wrench_input\") (type wrench, expressed in FT_sensor_frame with its origin as reference point), provided by the robot driver/simulator (e.g. MuJoCo) or by a WrenchInputHandler; it is converted to the wrench acting on the robot (see wrench_convention), passed through a dead zone, compensated for the tool weight and expressed in task_frame with its origin as reference point. The task has no monitor: it runs until it is stopped from outside. Outputs: time, position of task_frame (x_tcp, y_tcp, z_tcp), its pose (tf) and the raw input force (x_force, y_force, z_force, as received on wrench_input).\nGravity compensation (tool_weight > 0): it assumes that the force/torque sensor was tared with the tool completely vertical, pointing down (the z axis of FT_sensor_frame along gravity, -z of the robot base frame); the tool weight measured in other orientations of the tool is then compensated."
-        }
-      }
-    },
     "is-move_admittance":{
       "required":["file_path","parameters"],
       "properties":{
@@ -329,6 +319,16 @@
           },
           "additionalProperties":false,
           "required":["K_t","K_r","FT_sensor_frame","activate_linear","activate_angular","tool_weight","tool_COG"]
+        }
+      }
+    },
+    "from-force_control_task_lib-version-1.0.3":{
+      "required":["is-move_admittance"],
+      "properties":{
+        "is-move_admittance":{
+          "const":true,
+          "type":"boolean",
+          "description":"Task Specification: move_admittance.etasl.lua\nSet to true to indicate that the task uses the task specification mentioned above. \n Task description: Admittance control: the robot is compliant to external forces and torques measured by a force/torque sensor, e.g. to guide it by hand. Along each axis of task_frame the robot moves with a velocity proportional to the external force: K_force*F/K_t [m/s] for translations (if activate_linear) and K_torque*T/K_r [rad/s] for rotations (if activate_angular); i.e. it behaves as a damper with damping K_t/K_force [Ns/m] and K_r/K_torque [Nms/rad] and does not return to its initial pose. Non-activated motions keep their initial value. The measured wrench is read from the input channel named by wrench_input_channel (default \"wrench_input\") (type wrench, expressed in FT_sensor_frame with its origin as reference point), provided by the robot driver/simulator (e.g. MuJoCo) or by a WrenchInputHandler; it is converted to the wrench acting on the robot (see wrench_convention), passed through a dead zone, compensated for the tool weight and expressed in task_frame with its origin as reference point. The task has no monitor: it runs until it is stopped from outside. Outputs: time, position of task_frame (x_tcp, y_tcp, z_tcp), its pose (tf) and the raw input force (x_force, y_force, z_force, as received on wrench_input).\nGravity compensation (tool_weight > 0): it assumes that the force/torque sensor was tared with the tool completely vertical, pointing down (the z axis of FT_sensor_frame along gravity, -z of the robot base frame); the tool weight measured in other orientations of the tool is then compensated."
         }
       }
     }
